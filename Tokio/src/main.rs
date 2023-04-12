@@ -132,14 +132,33 @@ async fn process_pid(pid: Pid) -> Json<Process> {
     Json(process)
 }
 
-// #[get("/cpus")]
-// async fn cpus() -> Json<Cpus> {
-// }
-//
-// #[get("/cpus/<cpu_number>")]
-// async fn cpus_num(cpu_number: String) -> Json<Cpus_Num> {
-//
-// }
+#[get("/cpus")]
+async fn cpus() -> Json<Cpudata> {
+    let mut sys = System::new();
+    let sys = spawn_blocking(move || { sys.refresh_cpu_specifics(CpuRefreshKind::everything()); sys } ).await.unwrap();
+    let cpudata = Cpudata {
+        model: sys.global_cpu_info().brand().to_string(),
+        manufacturer: sys.global_cpu_info().vendor_id().to_string(),
+        speed: sys.global_cpu_info().frequency(),
+        usage: sys.global_cpu_info().cpu_usage(),
+    };
+    Json(cpudata)
+}
+
+#[get("/cpus/<cpu_number>")]
+async fn cpus_num(cpu_number: usize) -> Json<Cpudata> {
+    let mut sys = System::new();
+    let sys = spawn_blocking(move || { sys.refresh_cpu_specifics(CpuRefreshKind::everything()); sys } ).await.unwrap();
+    let mut iter = sys.cpus().iter();
+    let cpudata = Cpudata {
+        model: iter.nth(cpu_number).unwrap().brand().to_string(),
+        manufacturer: iter.nth(cpu_number).unwrap().vendor_id().to_string(),
+        speed: iter.nth(cpu_number).unwrap().frequency(),
+        usage: iter.nth(cpu_number).unwrap().cpu_usage(),
+    };
+    Json(cpudata)
+    
+}
 
 #[get("/processes/kill/<pid>")]
 async fn kill_process(pid: u32) -> Result<Json<Response>, String> {
